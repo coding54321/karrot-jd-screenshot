@@ -1,12 +1,11 @@
-import { chromium as playwrightChromium } from "playwright-core";
+import { chromium as playwrightChromium, Browser } from "playwright-core";
 import sharp from "sharp";
 
 const PADDING = 60;
-const SCALE = 2;
+const SCALE = 4; // 2x 고화질 (기존 2 → 4)
 
-export async function captureJobPage(url: string): Promise<{ buffer: Buffer; title: string }> {
+async function createBrowser(): Promise<Browser> {
   const isVercel = process.env.VERCEL === "1";
-
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const chromiumPkg = isVercel ? require("@sparticuz/chromium-min") : null;
 
@@ -17,26 +16,32 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
     executablePath = await chromiumPkg.executablePath(
       `https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar`
     );
-    launchArgs = chromiumPkg.args; // 패키지 권장 args (--no-sandbox, --disable-gpu, --single-process 등 포함)
+    launchArgs = chromiumPkg.args;
   }
 
-  console.log("[capture] isVercel:", isVercel, "executablePath:", executablePath);
+  return playwrightChromium.launch({ executablePath, args: launchArgs, headless: true });
+}
 
-  const browser = await playwrightChromium.launch({
-    executablePath,
-    args: launchArgs,
-    headless: true,
+async function capturePage(browser: Browser, url: string): Promise<{ buffer: Buffer; title: string }> {
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+    deviceScaleFactor: SCALE,
   });
 
   try {
-    const page = await browser.newPage({
-      viewport: { width: 1280, height: 900 },
-      deviceScaleFactor: SCALE,
+    // 미디어·웹소켓 등 불필요한 리소스 차단
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["media", "websocket", "other"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
     });
 
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(url, { waitUntil: "load", timeout: 30000 });
 
-    // 한글 웹폰트 강제 주입 (Vercel 환경에 시스템 한글 폰트 없음)
+    // 한글/이모지 웹폰트 강제 주입 (Vercel 환경에 시스템 폰트 없음)
     await page.addStyleTag({
       content: `
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
@@ -45,29 +50,19 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
       `,
     });
     await page.evaluate(() => document.fonts.ready);
-
     await page.waitForSelector("main", { timeout: 10000 });
 
-    // 절대 좌표(스크롤 포함)로 main 위치 계산
     const mainRect = await page.evaluate(() => {
       const el = document.querySelector("main");
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return {
-        x: r.left + window.pageXOffset,
-        y: r.top + window.pageYOffset,
-        width: r.width,
-      };
+      return { x: r.left + window.pageXOffset, y: r.top + window.pageYOffset, width: r.width };
     });
 
     if (!mainRect) throw new Error(`<main> 요소를 찾을 수 없습니다: ${url}`);
 
-    const title = await page.evaluate(() => {
-      const el = document.querySelector("main h1");
-      return el?.textContent?.trim() ?? "";
-    });
+    const title = await page.evaluate(() => document.querySelector("main h1")?.textContent?.trim() ?? "");
 
-    // 지원하기/자주묻는질문 버튼(.c-blLNpm) 직전까지만
     const btnY = await page.evaluate(() => {
       const el = document.querySelector(".c-blLNpm");
       if (!el) return null;
@@ -86,21 +81,39 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
     const bottom = btnY != null ? Math.round(btnY * s) : imgHeight;
     const cropHeight = bottom - top;
 
-    // sharp로 크롭 + 흰색 여백 추가
     const pad = PADDING * s;
-    const cropped = await sharp(rawBuffer)
+    const buffer = await sharp(rawBuffer)
       .extract({ left, top, width: right - left, height: cropHeight })
       .extend({
-        top: pad,
-        bottom: pad,
-        left: pad,
-        right: pad,
+        top: pad, bottom: pad, left: pad, right: pad,
         background: { r: 255, g: 255, b: 255, alpha: 1 },
       })
-      .png()
+      .png({ compressionLevel: 9 })
       .toBuffer();
 
-    return { buffer: cropped, title };
+    return { buffer, title };
+  } finally {
+    await page.close();
+  }
+}
+
+export async function captureJobPages(
+  urls: string[]
+): Promise<Array<{ url: string; buffer: Buffer; title: string } | { url: string; error: string }>> {
+  const browser = await createBrowser();
+  try {
+    return await Promise.all(
+      urls.map(async (url) => {
+        try {
+          const { buffer, title } = await capturePage(browser, url);
+          return { url, buffer, title };
+        } catch (e) {
+          const error = e instanceof Error ? e.message : String(e);
+          console.error("[capture] error:", url, error);
+          return { url, error };
+        }
+      })
+    );
   } finally {
     await browser.close();
   }
