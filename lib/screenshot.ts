@@ -40,7 +40,8 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
     await page.addStyleTag({
       content: `
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
-        * { font-family: 'Pretendard Variable', Pretendard, sans-serif !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+        * { font-family: 'Pretendard Variable', Pretendard, 'Noto Color Emoji', sans-serif !important; }
       `,
     });
     await page.evaluate(() => document.fonts.ready);
