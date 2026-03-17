@@ -58,11 +58,17 @@ export default function Home() {
       setProgress(validUrls.length);
       setStatus("done");
 
-      // 자동 다운로드 (1개면 PNG, 복수면 ZIP)
+      // Content-Disposition 헤더에서 파일명 추출
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename\*=UTF-8''(.+)/);
+      const filename = match
+        ? decodeURIComponent(match[1])
+        : validUrls.length === 1 ? "screenshot.png" : "daangn_jd_screenshots.zip";
+
       const blob = await res.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = validUrls.length === 1 ? "screenshot.png" : "daangn_jd_screenshots.zip";
+      link.download = filename;
       link.click();
       URL.revokeObjectURL(link.href);
     } catch (e) {

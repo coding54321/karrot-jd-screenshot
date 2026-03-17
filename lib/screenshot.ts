@@ -2,7 +2,7 @@ import { chromium as playwrightChromium, Browser } from "playwright-core";
 import sharp from "sharp";
 
 const PADDING = 60;
-const SCALE = 4; // 2x 고화질 (기존 2 → 4)
+const SCALE = 2;
 
 async function createBrowser(): Promise<Browser> {
   const isVercel = process.env.VERCEL === "1";
@@ -94,6 +94,7 @@ async function capturePage(browser: Browser, url: string): Promise<{ buffer: Buf
         top: pad, bottom: pad, left: pad, right: pad,
         background: { r: 255, g: 255, b: 255, alpha: 1 },
       })
+      .withMetadata({ density: 144 })
       .png({ compressionLevel: 9 })
       .toBuffer();
 
