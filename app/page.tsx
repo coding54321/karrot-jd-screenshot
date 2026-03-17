@@ -161,7 +161,7 @@ export default function Home() {
           <div className="mt-4 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
             <span>✅</span>
             <span>
-              <strong>{total}개</strong> 이미지가 ZIP으로 다운로드됐어요
+              {total === 1 ? "이미지가 다운로드됐어요" : <><strong>{total}개</strong> 이미지가 ZIP으로 다운로드됐어요</>}
             </span>
           </div>
         )}
