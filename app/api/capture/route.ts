@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "image/png",
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
         },
       });
     } catch (e) {
