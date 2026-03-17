@@ -42,9 +42,15 @@ async function capturePage(browser: Browser, url: string): Promise<{ buffer: Buf
     await page.goto(url, { waitUntil: "load", timeout: 30000 });
 
     // 한글/이모지 웹폰트 강제 주입 (Vercel 환경에 시스템 폰트 없음)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
     await page.addStyleTag({
       content: `
-        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+        @font-face {
+          font-family: 'Pretendard Variable';
+          src: url('${baseUrl}/fonts/PretendardVariable.woff2') format('woff2');
+          font-weight: 45 920;
+          font-display: block;
+        }
         @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
         * { font-family: 'Pretendard Variable', Pretendard, 'Noto Color Emoji', sans-serif !important; }
       `,
