@@ -35,6 +35,16 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
     });
 
     await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+    // 한글 웹폰트 강제 주입 (Vercel 환경에 시스템 한글 폰트 없음)
+    await page.addStyleTag({
+      content: `
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+        * { font-family: 'Pretendard Variable', Pretendard, sans-serif !important; }
+      `,
+    });
+    await page.evaluate(() => document.fonts.ready);
+
     await page.waitForSelector("main", { timeout: 10000 });
 
     // 절대 좌표(스크롤 포함)로 main 위치 계산
