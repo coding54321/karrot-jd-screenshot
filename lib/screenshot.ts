@@ -15,7 +15,7 @@ export async function captureJobPage(url: string): Promise<{ buffer: Buffer; tit
 
   if (isVercel) {
     executablePath = await chromiumPkg.executablePath(
-      `https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar`
+      `https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar`
     );
     launchArgs = chromiumPkg.args; // 패키지 권장 args (--no-sandbox, --disable-gpu, --single-process 등 포함)
   }
