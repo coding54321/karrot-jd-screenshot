@@ -4,13 +4,13 @@ import { captureJobPages } from "@/lib/screenshot";
 
 export const maxDuration = 300;
 
-function filenameFromTitle(title: string, index: number): string {
+function filenameFromTitle(title: string): string {
   const sanitized = title
     .replace(/[/\\:*?"<>|]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 100);
-  return `${String(index).padStart(2, "0")}_${sanitized || "job"}.png`;
+  return `${sanitized || "job"}.png`;
 }
 
 export async function POST(req: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   // 단일 성공이면 PNG 직접 반환
   if (successes.length === 1 && failures.length === 0) {
     const { buffer, title } = successes[0];
-    const filename = filenameFromTitle(title, 1);
+    const filename = filenameFromTitle(title);
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   // 복수이면 ZIP
   const zip = new JSZip();
   successes.forEach(({ buffer, title }, i) => {
-    zip.file(filenameFromTitle(title, i + 1), buffer);
+    zip.file(filenameFromTitle(title), buffer);
   });
 
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
