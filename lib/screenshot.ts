@@ -7,20 +7,24 @@ const SCALE = 2;
 export async function captureJobPage(url: string): Promise<{ buffer: Buffer; title: string }> {
   const isVercel = process.env.VERCEL === "1";
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const chromiumPkg = isVercel ? require("@sparticuz/chromium-min") : null;
+
   let executablePath: string | undefined;
+  let launchArgs: string[] = [];
+
   if (isVercel) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const chromium = require("@sparticuz/chromium-min");
-    executablePath = await chromium.executablePath(
+    executablePath = await chromiumPkg.executablePath(
       `https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar`
     );
+    launchArgs = chromiumPkg.args; // 패키지 권장 args (--no-sandbox, --disable-gpu, --single-process 등 포함)
   }
+
+  console.log("[capture] isVercel:", isVercel, "executablePath:", executablePath);
 
   const browser = await playwrightChromium.launch({
     executablePath,
-    args: isVercel
-      ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-      : [],
+    args: launchArgs,
     headless: true,
   });
 
