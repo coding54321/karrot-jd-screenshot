@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     try {
       const { buffer, title } = await captureJobPage(url);
       const filename = filenameFromTitle(title, 1);
-      return new NextResponse(buffer, {
+      return new NextResponse(new Uint8Array(buffer), {
         status: 200,
         headers: {
           "Content-Type": "image/png",
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-  return new NextResponse(zipBuffer, {
+  return new NextResponse(new Uint8Array(zipBuffer), {
     status: 200,
     headers: {
       "Content-Type": "application/zip",
