@@ -56,7 +56,12 @@ async function capturePage(browser: Browser, url: string): Promise<{ buffer: Buf
       const el = document.querySelector("main");
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      return { x: r.left + window.pageXOffset, y: r.top + window.pageYOffset, width: r.width };
+      return {
+        x: r.left + window.pageXOffset,
+        y: r.top + window.pageYOffset,
+        width: r.width,
+        height: r.height,
+      };
     });
 
     if (!mainRect) throw new Error(`<main> 요소를 찾을 수 없습니다: ${url}`);
@@ -77,8 +82,9 @@ async function capturePage(browser: Browser, url: string): Promise<{ buffer: Buf
     const top = Math.round(mainRect.y * s);
     const right = Math.round((mainRect.x + mainRect.width) * s);
 
-    const { height: imgHeight = 9999 } = await sharp(rawBuffer).metadata();
-    const bottom = btnY != null ? Math.round(btnY * s) : imgHeight;
+    // <main> 하단을 기본 cutoff로 사용 (fullPage 스크린샷에 포함되는 다음 페이지 콘텐츠 방지)
+    const mainBottom = Math.round((mainRect.y + mainRect.height) * s);
+    const bottom = btnY != null ? Math.min(Math.round(btnY * s), mainBottom) : mainBottom;
     const cropHeight = bottom - top;
 
     const pad = PADDING * s;
